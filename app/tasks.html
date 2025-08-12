@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasks</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        display: flex;
+        height: 100vh;
+    }
+    .sidebar {
+        width: 250px;
+        background: #6c63ff;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+    }
+    .sidebar h2 {
+        margin: 0 0 1rem;
+    }
+    .lists-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .lists {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: 10px;
+    }
+    .lists div {
+        padding: 8px;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.1);
+        margin-bottom: 5px;
+        border-radius: 5px;
+    }
+    .lists div:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    .logout-btn {
+        background: #ff4d4d;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: auto;
+    }
+    /* Existing button hover colors */
+button:hover {
+    background: #5952cc;
+}
+
+/* Add distinct hover colors for different buttons */
+
+/* Edit button */
+.task button:nth-child(5):hover {
+    background-color: #4caf50; /* green */
+    color: white;
+}
+
+/* Delete button */
+.task button:nth-child(6):hover {
+    background-color: #f44336; /* red */
+    color: white;
+}
+
+/* Add List button */
+button:contains('Add List'):hover {
+    background-color: #3f51b5; /* a different blue */
+    color: white;
+}
+
+/* Add Task button */
+button:contains('Add Task'):hover {
+    background-color: #2196f3; /* bright blue */
+    color: white;
+}
+
+/* Logout button */
+.logout-btn:hover {
+    background-color: #d32f2f; /* darker red */
+    color: white;
+}
+
+/* Also lists in sidebar should highlight on hover */
+.lists div:hover {
+    background: #8888ff; /* lighter purple */
+    color: white;
+    cursor: pointer;
+}
+
+    .logout-btn:hover {
+        background: #cc0000;
+    }
+    .content {
+        flex: 1;
+        padding: 2rem;
+        background: #f5f5ff;
+    }
+    input, select, textarea, button {
+        width: 98%;
+        padding: 8px;
+        margin: 8px 0;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+    }
+    button {
+        background: #6c63ff;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    button:hover {
+        background: #5952cc;
+    }
+    .task {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .task h3 {
+        margin: 0 0 5px;
+    }
+    .task button {
+        margin-right: 5px;
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2 id="userListTitle">Your List</h2>
+    <div class="lists-container">
+        <input type="text" id="newList" placeholder="New list name" />
+        <button onclick="addList()">Add List</button>
+        <div class="lists" id="lists"></div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<div class="content">
+    <h2 id="selectedListTitle">Select a List</h2>
+    <input type="text" id="taskTitle" placeholder="Task Title">
+    <textarea id="taskDescription" placeholder="Task Description"></textarea>
+    <select id="taskPriority">
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+    </select>
+    <select id="taskState">
+        <option value="Pending">Pending</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+    </select>
+    <button onclick="addTask()">Add Task</button>
+
+    <div id="tasks"></div>
+</div>
+
+<script>
+    let loggedInUser = sessionStorage.getItem("loggedInUser");
+    let selectedList = null;
+
+    if (!loggedInUser) {
+        window.location.href = "index.html";
+    }
+
+    document.getElementById("userListTitle").textContent = `${loggedInUser}'s Lists`;
+
+    function getUserData() {
+        return JSON.parse(localStorage.getItem(`tasks_${loggedInUser}`)) || {};
+    }
+
+    function saveUserData(data) {
+        localStorage.setItem(`tasks_${loggedInUser}`, JSON.stringify(data));
+    }
+
+    function loadLists() {
+        const data = getUserData();
+        const listsDiv = document.getElementById("lists");
+        listsDiv.innerHTML = "";
+        Object.keys(data).forEach(listName => {
+            const div = document.createElement("div");
+            div.textContent = listName;
+            div.onclick = () => selectList(listName);
+            listsDiv.appendChild(div);
+        });
+    }
+
+    function addList() {
+        const newList = document.getElementById("newList").value.trim();
+        if (!newList) return alert("Please enter a list name.");
+        const data = getUserData();
+        if (!data[newList]) {
+            data[newList] = [];
+            saveUserData(data);
+            loadLists();
+        }
+        document.getElementById("newList").value = "";
+    }
+
+    function selectList(listName) {
+        selectedList = listName;
+        document.getElementById("selectedListTitle").textContent = listName;
+        loadTasks();
+    }
+
+    function loadTasks() {
+        const data = getUserData();
+        const tasksDiv = document.getElementById("tasks");
+        tasksDiv.innerHTML = "";
+        if (selectedList && data[selectedList]) {
+            data[selectedList].forEach((task, index) => {
+                const taskDiv = document.createElement("div");
+                taskDiv.classList.add("task");
+                taskDiv.innerHTML = `
+                    <h3>${task.title}</h3>
+                    <p>${task.description}</p>
+                    <p><strong>Priority:</strong> ${task.priority}</p>
+                    <p><strong>Status:</strong> ${task.state}</p>
+                    <button onclick="editTask(${index})">Edit</button>
+                    <button onclick="deleteTask(${index})">Delete</button>
+                `;
+                tasksDiv.appendChild(taskDiv);
+            });
+        }
+    }
+
+    function addTask() {
+        if (!selectedList) return alert("Please select a list first.");
+        const title = document.getElementById("taskTitle").value.trim();
+        const description = document.getElementById("taskDescription").value.trim();
+        const priority = document.getElementById("taskPriority").value;
+        const state = document.getElementById("taskState").value;
+        if (!title || !description) return alert("Please fill out all fields.");
+        const data = getUserData();
+        data[selectedList].push({ title, description, priority, state });
+        saveUserData(data);
+        document.getElementById("taskTitle").value = "";
+        document.getElementById("taskDescription").value = "";
+        loadTasks();
+    }
+
+    function editTask(index) {
+        const data = getUserData();
+        const task = data[selectedList][index];
+        document.getElementById("taskTitle").value = task.title;
+        document.getElementById("taskDescription").value = task.description;
+        document.getElementById("taskPriority").value = task.priority;
+        document.getElementById("taskState").value = task.state;
+        deleteTask(index);
+    }
+
+    function deleteTask(index) {
+        const data = getUserData();
+        data[selectedList].splice(index, 1);
+        saveUserData(data);
+        loadTasks();
+    }
+
+    function logout() {
+        sessionStorage.removeItem("loggedInUser");
+        window.location.href = "index.html";
+    }
+
+    loadLists();
+</script>
+
+</body>
+</html>

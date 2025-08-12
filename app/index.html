@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login & Sign Up</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f5ff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    .card {
+        background: #fff;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        width: 300px;
+        text-align: center;
+    }
+    h2 {
+        color: #6c63ff;
+        margin-bottom: 1rem;
+    }
+    input {
+        width: 100%;
+        padding: 8px;
+        margin: 8px 0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .password-container {
+        position: relative;
+    }
+    .password-container input {
+        padding-right: 35px; /* space for the eye icon */
+    }
+    .toggle-eye {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 18px;
+        color: #6c63ff;
+        user-select: none;
+    }
+    .toggle-eye:hover {
+        color: #5952cc;
+    }
+    button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: none;
+        background: #6c63ff;
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    button:hover {
+        background: #5952cc;
+    }
+    .toggle {
+        margin-top: 1rem;
+        font-size: 14px;
+        color: #555;
+        cursor: pointer;
+    }
+    .toggle span {
+        color: #6c63ff;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h2 id="formTitle">Login</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <div class="password-container">
+        <input type="password" id="password" placeholder="Password" />
+        <span class="toggle-eye" onclick="togglePassword()">👁️</span>
+    </div>
+    <button onclick="handleAuth()">Login</button>
+    <div class="toggle" onclick="toggleForm()">Don't have an account? <span>Sign Up</span></div>
+</div>
+
+<script>
+    let isLogin = true;
+
+    function toggleForm() {
+        isLogin = !isLogin;
+        document.getElementById("formTitle").textContent = isLogin ? "Login" : "Sign Up";
+        document.querySelector("button").textContent = isLogin ? "Login" : "Sign Up";
+        document.querySelector(".toggle").innerHTML = isLogin 
+            ? "Don't have an account? <span>Sign Up</span>"
+            : "Already have an account? <span>Login</span>";
+    }
+
+    function togglePassword() {
+        const passwordField = document.getElementById("password");
+        const eyeIcon = document.querySelector(".toggle-eye");
+        if (passwordField.type === "password") {
+            passwordField.type = "text";
+            eyeIcon.textContent = "🙈"; // hide mode
+        } else {
+            passwordField.type = "password";
+            eyeIcon.textContent = "👁️"; // show mode
+        }
+    }
+
+    async function hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function handleAuth() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!username || !password) {
+            alert("Please fill out all fields.");
+            return;
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        if (isLogin) {
+            const storedPassword = localStorage.getItem(`user_${username}`);
+            if (!storedPassword) {
+                alert("User does not exist.");
+                return;
+            }
+            if (storedPassword !== hashedPassword) {
+                alert("Incorrect password.");
+                return;
+            }
+            sessionStorage.setItem("loggedInUser", username);
+            window.location.href = "tasks.html";
+        } else {
+            if (localStorage.getItem(`user_${username}`)) {
+                alert("Username already exists.");
+                return;
+            }
+            localStorage.setItem(`user_${username}`, hashedPassword);
+            alert("Account created successfully! Please login.");
+            toggleForm();
+        }
+    }
+</script>
+
+</body>
+</html>
